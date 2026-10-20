@@ -35,13 +35,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .stat b{display:block;font:700 22px Unbounded,sans-serif}.stat span{color:var(--mute);font-size:13px}
 .msg{padding:12px;border-radius:8px;background:var(--badbg);color:var(--bad);margin-bottom:12px}
-.plist{list-style:none;margin:12px 0 0;padding:0;max-height:360px;overflow:auto}
+.plist{list-style:none;margin:12px 0 0;padding:0;max-height:70vh;overflow:auto}
 .plist li{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .plist .nm{order:-1;flex:1 1 100%;min-width:0;overflow-wrap:anywhere}
 .plist button{padding:3px 8px;font-size:13px}
 .tw{overflow-x:auto;margin-top:12px}
 table{border-collapse:collapse;width:100%}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+td.pn{min-width:110px;max-width:190px;overflow-wrap:anywhere;line-height:1.3}
+.nw{white-space:nowrap;width:1%}
 th{font-weight:600;color:var(--mute)}
 th.sortable{cursor:pointer;user-select:none}
 .st{border-radius:999px;padding:3px 10px;font-size:13px;font-weight:500;border:0}
@@ -236,13 +238,13 @@ function renderCombos(){
   let doneAll=0;
   if(!err){currentCombos().rows.forEach(x=>{if(statuses.get(x.key))doneAll++})}
   $("stats").innerHTML=[["Игроков",n],["Онлайн",players.filter(p=>p.online).length],["Размер команды",size||"—"],["Всего комбинаций",err?0:total],["Выполнено",doneAll],["Осталось",err?0:total-doneAll],["Показано",r.length]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");
-  $("thead").innerHTML=`<tr><th class="sortable" id="thN" title="Сортировать">№ ${sortAsc?"▲":"▼"}</th>${Array.from({length:size},(_,i)=>`<th>Игрок ${i+1}</th>`).join("")}<th>Онлайн</th><th>Статус</th><th></th></tr>`;
+  $("thead").innerHTML=`<tr><th class="sortable nw" id="thN" title="Сортировать">№ ${sortAsc?"▲":"▼"}</th>${Array.from({length:size},(_,i)=>`<th>Игрок ${i+1}</th>`).join("")}<th class="nw">Онлайн</th><th class="nw">Статус</th><th class="nw"></th></tr>`;
   $("thN").onclick=()=>{sortAsc=!sortAsc;renderCombos()};
   const per=+$("cSize").value,pages=Math.max(1,Math.ceil(r.length/per));
   if(page>pages)page=pages;
   const slice=r.slice((page-1)*per,page*per);
   $("tbody").innerHTML=slice.length?slice.map(x=>{const d=!!statuses.get(x.key);
-    return `<tr><td>${x.n}</td>${x.c.map(p=>`<td><span class="dot ${p.online?"on":""}"></span>${nameHtml(p)}</td>`).join("")}<td><span class="oc ${x.c.every(p=>p.online)?"all":""}">${x.c.filter(p=>p.online).length} / ${size}</span></td><td><button class="st ${d?"yes":"no"}" data-k="${x.key}" title="Нажмите, чтобы изменить">${d?"Выполнено":"Не выполнено"}</button></td><td><button data-c="${x.key}">Копировать</button></td></tr>`}).join(""):`<tr><td colspan="${size+4}" class="sub">${err?"":"Нет комбинаций по текущему фильтру."}</td></tr>`;
+    return `<tr><td class="nw">${x.n}</td>${x.c.map(p=>`<td class="pn"><span class="dot ${p.online?"on":""}"></span>${nameHtml(p)}</td>`).join("")}<td class="nw"><span class="oc ${x.c.every(p=>p.online)?"all":""}">${x.c.filter(p=>p.online).length} / ${size}</span></td><td class="nw"><button class="st ${d?"yes":"no"}" data-k="${x.key}" title="Нажмите, чтобы изменить">${d?"Выполнено":"Не выполнено"}</button></td><td class="nw"><button data-c="${x.key}">Копировать</button></td></tr>`}).join(""):`<tr><td colspan="${size+4}" class="sub">${err?"":"Нет комбинаций по текущему фильтру."}</td></tr>`;
   $("info").textContent=r.length?`Строки ${(page-1)*per+1}–${Math.min(page*per,r.length)} из ${r.length}`:"";
   $("pg").textContent=`${page} / ${pages}`;
   $("prev").disabled=page<=1;$("next").disabled=page>=pages;
