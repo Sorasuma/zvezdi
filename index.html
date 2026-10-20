@@ -15,7 +15,8 @@ header{padding:28px 20px 8px;max-width:1200px;margin:auto}
 h1{font:700 26px Unbounded,sans-serif;margin:0 0 4px}
 h2{font:500 17px Unbounded,sans-serif;margin:0 0 14px}
 .sub{color:var(--mute);margin:0}
-main{max-width:1200px;margin:auto;padding:12px 20px 40px;display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+main{max-width:1200px;margin:auto;padding:12px 20px 40px;display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
+main>div{min-width:0}
 @media (max-width:860px){main{grid-template-columns:1fr}}
 section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
 label{display:block;font-weight:500;margin:10px 0 4px}
@@ -35,8 +36,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .stat b{display:block;font:700 22px Unbounded,sans-serif}.stat span{color:var(--mute);font-size:13px}
 .msg{padding:12px;border-radius:8px;background:var(--badbg);color:var(--bad);margin-bottom:12px}
 .plist{list-style:none;margin:12px 0 0;padding:0;max-height:360px;overflow:auto}
-.plist li{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
-.plist .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.plist li{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.plist .nm{order:-1;flex:1 1 100%;min-width:0;overflow-wrap:anywhere}
 .plist button{padding:3px 8px;font-size:13px}
 .tw{overflow-x:auto;margin-top:12px}
 table{border-collapse:collapse;width:100%}
@@ -51,6 +52,11 @@ a.pl svg{width:14px;height:14px;vertical-align:-2px;margin-right:3px;fill:curren
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.on{opacity:1}
 .tests li{margin:2px 0}.tests .p{color:var(--ok)}.tests .f{color:var(--bad)}
+.ob{border-radius:999px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.ob.on{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--line)}
+.dot.on{background:var(--ok)}
+.oc{font-weight:600}.oc.all{color:var(--ok)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -92,6 +98,12 @@ a.pl svg{width:14px;height:14px;vertical-align:-2px;margin-right:3px;fill:curren
     <div class="row">
       <input id="cSearch" type="search" placeholder="Поиск по имени участника">
       <select id="cStatus" aria-label="Фильтр по статусу"><option value="all">Все статусы</option><option value="no">Не выполнено</option><option value="yes">Выполнено</option></select>
+      <select id="cOnline" aria-label="Фильтр по онлайну">
+        <option value="all">Любой онлайн</option>
+        <option value="full">Все онлайн</option>
+        <option value="some">Хотя бы один онлайн</option>
+        <option value="off">Есть не на месте</option>
+      </select>
       <select id="cSize" aria-label="Строк на странице"><option>25</option><option>50</option><option>100</option></select>
       <button id="copyAll" type="button">Копировать все (отфильтрованные)</button>
     </div>
@@ -178,11 +190,16 @@ function renderPlayers(){
   $("pCount").textContent=players.length;
   const q=$("pSearch").value.trim().toLowerCase();
   const list=players.filter(p=>p.name.toLowerCase().includes(q));
-  $("pList").innerHTML=list.length?list.map(p=>`<li><span class="nm">${nameHtml(p)}</span><button data-e="${p.id}">Изменить</button><button class="danger" data-d="${p.id}">Удалить</button></li>`).join(""):`<li class="sub">${players.length?"Никого не найдено.":"Игроков пока нет. Добавьте первого."}</li>`;
+  $("pList").innerHTML=list.length?list.map(p=>`<li><button class="ob ${p.online?"on":""}" data-o="${p.id}" title="Нажмите, чтобы изменить">${p.online?"● Онлайн":"○ Не на месте"}</button><span class="nm">${nameHtml(p)}</span><button data-e="${p.id}">Изменить</button><button class="danger" data-d="${p.id}">Удалить</button></li>`).join(""):`<li class="sub">${players.length?"Никого не найдено.":"Игроков пока нет. Добавьте первого."}</li>`;
 }
 $("pSearch").oninput=renderPlayers;
 $("pList").addEventListener("click",async e=>{
-  const eid=e.target.dataset.e,did=e.target.dataset.d;
+  const eid=e.target.dataset.e,did=e.target.dataset.d,oid=e.target.dataset.o;
+  if(oid){
+    const p=players.find(x=>x.id===oid);p.online=!p.online;renderPlayers();renderCombos();
+    const {error}=await db.from("players").update({online:p.online}).eq("id",oid);
+    if(error){toast("Ошибка сохранения: "+error.message);loadPlayers()}
+  }
   if(eid){const p=players.find(x=>x.id===eid);editId=eid;$("pName").value=p.name;$("pVk").value=p.vk_url||"";$("formTitle").textContent="Редактировать игрока";$("pSave").textContent="Сохранить";$("pCancel").hidden=false;$("pName").focus()}
   if(did){const p=players.find(x=>x.id===did);
     if(!confirm(`Удалить игрока «${p.name}»? Все комбинации с ним исчезнут.`))return;
@@ -206,29 +223,31 @@ function currentCombos(){
 }
 function filtered(){
   const {err,rows}=currentCombos();
-  const q=$("cSearch").value.trim().toLowerCase(),st=$("cStatus").value;
-  let r=rows.filter(x=>(!q||x.c.some(p=>p.name.toLowerCase().includes(q)))&&(st==="all"||(st==="yes")===!!statuses.get(x.key)));
+  const q=$("cSearch").value.trim().toLowerCase(),st=$("cStatus").value,on=$("cOnline").value;
+  let r=rows.filter(x=>(!q||x.c.some(p=>p.name.toLowerCase().includes(q)))
+    &&(st==="all"||(st==="yes")===!!statuses.get(x.key))
+    &&(on==="all"||(on==="full"&&x.c.every(p=>p.online))||(on==="some"&&x.c.some(p=>p.online))||(on==="off"&&x.c.some(p=>!p.online))));
   if(!sortAsc)r=r.slice().reverse();
   return {err,total:rows.length,r};
 }
 function renderCombos(){
   const size=k(),n=players.length,{err,total,r}=filtered();
   $("notice").innerHTML=err?`<div class="msg">${esc(err)}</div>`:"";
-  const done=r.length?0:0;let doneAll=0;
+  let doneAll=0;
   if(!err){currentCombos().rows.forEach(x=>{if(statuses.get(x.key))doneAll++})}
-  $("stats").innerHTML=[["Игроков",n],["Размер команды",size||"—"],["Всего комбинаций",err?0:total],["Выполнено",doneAll],["Осталось",err?0:total-doneAll],["Показано",r.length]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");
-  $("thead").innerHTML=`<tr><th class="sortable" id="thN" title="Сортировать">№ ${sortAsc?"▲":"▼"}</th>${Array.from({length:size},(_,i)=>`<th>Игрок ${i+1}</th>`).join("")}<th>Статус</th><th></th></tr>`;
+  $("stats").innerHTML=[["Игроков",n],["Онлайн",players.filter(p=>p.online).length],["Размер команды",size||"—"],["Всего комбинаций",err?0:total],["Выполнено",doneAll],["Осталось",err?0:total-doneAll],["Показано",r.length]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");
+  $("thead").innerHTML=`<tr><th class="sortable" id="thN" title="Сортировать">№ ${sortAsc?"▲":"▼"}</th>${Array.from({length:size},(_,i)=>`<th>Игрок ${i+1}</th>`).join("")}<th>Онлайн</th><th>Статус</th><th></th></tr>`;
   $("thN").onclick=()=>{sortAsc=!sortAsc;renderCombos()};
   const per=+$("cSize").value,pages=Math.max(1,Math.ceil(r.length/per));
   if(page>pages)page=pages;
   const slice=r.slice((page-1)*per,page*per);
   $("tbody").innerHTML=slice.length?slice.map(x=>{const d=!!statuses.get(x.key);
-    return `<tr><td>${x.n}</td>${x.c.map(p=>`<td>${nameHtml(p)}</td>`).join("")}<td><button class="st ${d?"yes":"no"}" data-k="${x.key}" title="Нажмите, чтобы изменить">${d?"Выполнено":"Не выполнено"}</button></td><td><button data-c="${x.key}">Копировать</button></td></tr>`}).join(""):`<tr><td colspan="${size+3}" class="sub">${err?"":"Нет комбинаций по текущему фильтру."}</td></tr>`;
+    return `<tr><td>${x.n}</td>${x.c.map(p=>`<td><span class="dot ${p.online?"on":""}"></span>${nameHtml(p)}</td>`).join("")}<td><span class="oc ${x.c.every(p=>p.online)?"all":""}">${x.c.filter(p=>p.online).length} / ${size}</span></td><td><button class="st ${d?"yes":"no"}" data-k="${x.key}" title="Нажмите, чтобы изменить">${d?"Выполнено":"Не выполнено"}</button></td><td><button data-c="${x.key}">Копировать</button></td></tr>`}).join(""):`<tr><td colspan="${size+4}" class="sub">${err?"":"Нет комбинаций по текущему фильтру."}</td></tr>`;
   $("info").textContent=r.length?`Строки ${(page-1)*per+1}–${Math.min(page*per,r.length)} из ${r.length}`:"";
   $("pg").textContent=`${page} / ${pages}`;
   $("prev").disabled=page<=1;$("next").disabled=page>=pages;
 }
-["kSize","cSearch","cStatus","cSize"].forEach(id=>$(id).addEventListener("input",()=>{page=1;renderCombos()}));
+["kSize","cSearch","cStatus","cOnline","cSize"].forEach(id=>$(id).addEventListener("input",()=>{page=1;renderCombos()}));
 $("prev").onclick=()=>{page--;renderCombos()};
 $("next").onclick=()=>{page++;renderCombos()};
 $("tbody").addEventListener("click",async e=>{
