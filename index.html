@@ -15,8 +15,10 @@ header{padding:28px 20px 8px;max-width:1200px;margin:auto}
 h1{font:700 26px Unbounded,sans-serif;margin:0 0 4px}
 h2{font:500 17px Unbounded,sans-serif;margin:0 0 14px}
 .sub{color:var(--mute);margin:0}
-main{max-width:1200px;margin:auto;padding:12px 20px 40px;display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
+main{max-width:2000px;margin:auto;padding:12px 20px 40px;display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
 main>div{min-width:0}
+main.wide{grid-template-columns:minmax(0,1fr)}
+main.wide>div:first-child{order:2}
 @media (max-width:860px){main{grid-template-columns:1fr}}
 section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
 label{display:block;font-weight:500;margin:10px 0 4px}
@@ -43,7 +45,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .tw thead th{position:sticky;top:0;background:var(--card);z-index:1;box-shadow:0 1px 0 var(--line)}
 table{border-collapse:collapse;width:100%}
 th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-td.pn{min-width:110px;max-width:190px;overflow-wrap:anywhere;line-height:1.3}
+td.pn{min-width:130px;overflow-wrap:anywhere;line-height:1.3}
 .nw{white-space:nowrap;width:1%}
 th{font-weight:600;color:var(--mute)}
 th.sortable{cursor:pointer;user-select:none}
@@ -109,6 +111,7 @@ a.pl svg{width:14px;height:14px;vertical-align:-2px;margin-right:3px;fill:curren
       </select>
       <select id="cSize" aria-label="Строк на странице"><option>25</option><option>50</option><option>100</option></select>
       <button id="copyAll" type="button">Копировать все (отфильтрованные)</button>
+      <button id="wideBtn" type="button">Развернуть на всю ширину</button>
     </div>
     <div class="tw"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
     <div class="pager"><span id="info"></span><span class="row"><button id="prev" type="button">Назад</button><span id="pg"></span><button id="next" type="button">Вперёд</button></span></div>
@@ -281,6 +284,15 @@ $("runTests").onclick=()=>{
     const ok=cs.length===exp&&uniq===exp&&binom(n,kk)===BigInt(exp);
     return `<li class="${ok?"p":"f"}">${ok?"✔":"✘"} ${n} игроков, команда из ${kk}: получено ${cs.length}, уникальных ${uniq}, ожидалось ${exp}</li>`}).join("");
 };
+
+/* ---------- Ширина окна ---------- */
+function setWide(on){
+  document.querySelector("main").classList.toggle("wide",on);
+  $("wideBtn").textContent=on?"Вернуть обычную ширину":"Развернуть на всю ширину";
+  try{localStorage.setItem("wideMode",on?"1":"0")}catch{}
+}
+$("wideBtn").onclick=()=>setWide(!document.querySelector("main").classList.contains("wide"));
+try{if(localStorage.getItem("wideMode")==="1")setWide(true)}catch{}
 
 /* ---------- Старт ---------- */
 renderPlayers();renderCombos();
