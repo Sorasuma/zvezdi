@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Комбинации игроков</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mute:#5b6784;--line:#d6dce8;--acc:#2f5bea;--acc-ink:#fff;--ok:#1f8a54;--okbg:#dff3e8;--bad:#c23b3b;--badbg:#fbe3e3}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1524;--card:#18213a;--ink:#e8ecf8;--mute:#9aa6c4;--line:#2b3656;--acc:#6f93ff;--acc-ink:#0f1524;--ok:#58d49a;--okbg:#17372b;--bad:#ff8585;--badbg:#3d2024}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Onest,system-ui,sans-serif}
+header{padding:28px 20px 8px;max-width:1200px;margin:auto}
+h1{font:700 26px Unbounded,sans-serif;margin:0 0 4px}
+h2{font:500 17px Unbounded,sans-serif;margin:0 0 14px}
+.sub{color:var(--mute);margin:0}
+main{max-width:1200px;margin:auto;padding:12px 20px 40px;display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+label{display:block;font-weight:500;margin:10px 0 4px}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:6px}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:0 0 auto}.row>input,.row>select{flex:1 1 140px;width:auto}
+.err{color:var(--bad);min-height:1.3em;margin:6px 0 0;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat b{display:block;font:700 22px Unbounded,sans-serif}.stat span{color:var(--mute);font-size:13px}
+.msg{padding:12px;border-radius:8px;background:var(--badbg);color:var(--bad);margin-bottom:12px}
+.plist{list-style:none;margin:12px 0 0;padding:0;max-height:360px;overflow:auto}
+.plist li{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.plist .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.plist button{padding:3px 8px;font-size:13px}
+.tw{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:600;color:var(--mute)}
+th.sortable{cursor:pointer;user-select:none}
+.st{border-radius:999px;padding:3px 10px;font-size:13px;font-weight:500;border:0}
+.st.no{background:var(--badbg);color:var(--bad)}.st.yes{background:var(--okbg);color:var(--ok)}
+a.pl{color:var(--acc);text-decoration:none;font-weight:500}a.pl:hover{text-decoration:underline}
+a.pl svg{width:14px;height:14px;vertical-align:-2px;margin-right:3px;fill:currentColor}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;color:var(--mute)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+.tests li{margin:2px 0}.tests .p{color:var(--ok)}.tests .f{color:var(--bad)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Комбинации игроков</h1>
+  <p class="sub">Все уникальные составы из списка игроков. Данные общие для всей команды и обновляются в реальном времени.</p>
+</header>
+<main>
+<div>
+  <section>
+    <h2 id="formTitle">Добавить игрока</h2>
+    <form id="pForm" novalidate>
+      <label for="pName">Имя игрока *</label>
+      <input id="pName" maxlength="60" autocomplete="off">
+      <label for="pVk">Ссылка на профиль ВКонтакте</label>
+      <input id="pVk" placeholder="https://vk.com/id1" autocomplete="off">
+      <p class="err" id="pErr"></p>
+      <div class="row"><button class="primary" id="pSave" type="submit">Добавить</button><button type="button" id="pCancel" hidden>Отмена</button></div>
+    </form>
+  </section>
+  <section style="margin-top:18px">
+    <h2>Игроки (<span id="pCount">0</span>)</h2>
+    <input id="pSearch" type="search" placeholder="Поиск по имени">
+    <ul class="plist" id="pList"></ul>
+  </section>
+</div>
+<div>
+  <section>
+    <h2>Таблица комбинаций</h2>
+    <div class="row">
+      <label for="kSize" style="margin:0">Игроков в команде</label>
+      <input id="kSize" type="number" min="1" value="4" style="max-width:90px;flex:0 0 90px">
+      <button id="runTests" type="button">Проверить контрольные примеры</button>
+    </div>
+    <ul class="tests" id="tests"></ul>
+    <div id="notice"></div>
+    <div class="stats" id="stats"></div>
+    <div class="row">
+      <input id="cSearch" type="search" placeholder="Поиск по имени участника">
+      <select id="cStatus" aria-label="Фильтр по статусу"><option value="all">Все статусы</option><option value="no">Не выполнено</option><option value="yes">Выполнено</option></select>
+      <select id="cSize" aria-label="Строк на странице"><option>25</option><option>50</option><option>100</option></select>
+      <button id="copyAll" type="button">Копировать все (отфильтрованные)</button>
+    </div>
+    <div class="tw"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div class="pager"><span id="info"></span><span class="row"><button id="prev" type="button">Назад</button><span id="pg"></span><button id="next" type="button">Вперёд</button></span></div>
+  </section>
+</div>
+</main>
+<div id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// ===== НАСТРОЙКА: вставьте данные вашего проекта Supabase (Settings -> API) =====
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+// =================================================================================
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const VK_ICON = '<svg viewBox="0 0 24 24"><path d="M12.8 17.5c-6.1 0-9.6-4.2-9.8-11.2h3.1c.1 5.1 2.4 7.3 4.2 7.7V6.3h2.9v4.4c1.8-.2 3.6-2.2 4.2-4.4h2.9c-.5 2.7-2.5 4.700-3.900 5.500 1.400.700 3.700 2.400 4.500 5.700h-3.200c-.7-2.100-2.400-3.800-4.600-4v4z"/></svg>';
+
+let players = [], statuses = new Map(), editId = null, page = 1, sortAsc = true, db = null;
+
+const configured = !SUPABASE_URL.includes("YOUR-PROJECT");
+if (configured) db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),1800)}
+
+/* ---------- Математика ---------- */
+function binom(n,k){if(k<0||k>n)return 0n;k=Math.min(k,n-k);let r=1n;for(let i=1;i<=k;i++)r=r*BigInt(n-k+i)/BigInt(i);return r}
+// Сочетания без повторов в лексикографическом порядке индексов (перестановки не создаются)
+function combinations(arr,k){
+  const n=arr.length,res=[];if(k<1||k>n)return res;
+  const idx=Array.from({length:k},(_,i)=>i);
+  for(;;){
+    res.push(idx.map(i=>arr[i]));
+    let i=k-1;while(i>=0&&idx[i]===n-k+i)i--;
+    if(i<0)break;
+    idx[i]++;for(let j=i+1;j<k;j++)idx[j]=idx[j-1]+1;
+  }
+  return res;
+}
+const comboKey = c => c.map(p=>p.id).sort().join(",");
+const MAX_COMBOS = 200000;
+
+/* ---------- Данные ---------- */
+async function loadPlayers(){
+  const {data,error}=await db.from("players").select("*").order("created_at");
+  if(error)return toast("Ошибка загрузки игроков: "+error.message);
+  players=data.sort((a,b)=>a.name.localeCompare(b.name,"ru"));
+  renderPlayers();renderCombos();
+}
+async function loadStatuses(){
+  const {data,error}=await db.from("combo_status").select("combo_key,done");
+  if(error)return toast("Ошибка загрузки статусов: "+error.message);
+  statuses=new Map(data.map(r=>[r.combo_key,r.done]));
+  renderCombos();
+}
+
+/* ---------- Игроки ---------- */
+function normVk(v){
+  v=v.trim();if(!v)return {ok:true,url:null};
+  if(!/^https?:\/\//i.test(v))v="https://"+v;
+  const ok=/^https:\/\/(www\.|m\.)?vk\.(com|ru)\/[A-Za-z0-9_.\-]+\/?$/i.test(v);
+  return {ok,url:v};
+}
+$("pForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!configured)return $("pErr").textContent="Сначала укажите данные Supabase в index.html.";
+  const name=$("pName").value.trim().replace(/\s+/g," "),vk=normVk($("pVk").value);
+  if(!name)return $("pErr").textContent="Введите имя игрока.";
+  if(!vk.ok)return $("pErr").textContent="Некорректная ссылка. Пример: https://vk.com/id1";
+  const dup=players.find(p=>p.id!==editId&&(p.name.toLowerCase()===name.toLowerCase()||(vk.url&&p.vk_url&&p.vk_url.replace(/\/$/,"").toLowerCase()===vk.url.replace(/\/$/,"").toLowerCase())));
+  if(dup)return $("pErr").textContent=`Такой игрок уже есть: ${dup.name}.`;
+  $("pErr").textContent="";$("pSave").disabled=true;
+  const q=editId?db.from("players").update({name,vk_url:vk.url}).eq("id",editId):db.from("players").insert({name,vk_url:vk.url});
+  const {error}=await q;$("pSave").disabled=false;
+  if(error)return $("pErr").textContent="Ошибка сохранения: "+error.message;
+  toast(editId?"Игрок сохранён":"Игрок добавлен");resetForm();loadPlayers();
+});
+function resetForm(){editId=null;$("pName").value="";$("pVk").value="";$("pErr").textContent="";$("formTitle").textContent="Добавить игрока";$("pSave").textContent="Добавить";$("pCancel").hidden=true}
+$("pCancel").onclick=resetForm;
+function renderPlayers(){
+  $("pCount").textContent=players.length;
+  const q=$("pSearch").value.trim().toLowerCase();
+  const list=players.filter(p=>p.name.toLowerCase().includes(q));
+  $("pList").innerHTML=list.length?list.map(p=>`<li><span class="nm">${nameHtml(p)}</span><button data-e="${p.id}">Изменить</button><button class="danger" data-d="${p.id}">Удалить</button></li>`).join(""):`<li class="sub">${players.length?"Никого не найдено.":"Игроков пока нет. Добавьте первого."}</li>`;
+}
+$("pSearch").oninput=renderPlayers;
+$("pList").addEventListener("click",async e=>{
+  const eid=e.target.dataset.e,did=e.target.dataset.d;
+  if(eid){const p=players.find(x=>x.id===eid);editId=eid;$("pName").value=p.name;$("pVk").value=p.vk_url||"";$("formTitle").textContent="Редактировать игрока";$("pSave").textContent="Сохранить";$("pCancel").hidden=false;$("pName").focus()}
+  if(did){const p=players.find(x=>x.id===did);
+    if(!confirm(`Удалить игрока «${p.name}»? Все комбинации с ним исчезнут.`))return;
+    const {error}=await db.from("players").delete().eq("id",did);
+    if(error)return toast("Ошибка удаления: "+error.message);
+    toast("Игрок удалён");loadPlayers();}
+});
+function nameHtml(p){
+  if(!p.vk_url)return esc(p.name);
+  return `<a class="pl" href="${esc(p.vk_url)}" target="_blank" rel="noopener noreferrer">${VK_ICON}${esc(p.name)}</a>`;
+}
+
+/* ---------- Комбинации ---------- */
+function k(){const v=parseInt($("kSize").value,10);return Number.isFinite(v)&&v>0?v:0}
+function currentCombos(){
+  const n=players.length,size=k();
+  if(!size)return {err:"Размер команды должен быть не меньше 1.",rows:[]};
+  if(n<size)return {err:`Недостаточно игроков: нужно минимум ${size}, сейчас ${n}.`,rows:[]};
+  if(binom(n,size)>BigInt(MAX_COMBOS))return {err:`Слишком много комбинаций: ${binom(n,size)}. Уменьшите число игроков или измените размер команды (лимит ${MAX_COMBOS}).`,rows:[]};
+  return {rows:combinations(players,size).map((c,i)=>({n:i+1,c,key:comboKey(c)}))};
+}
+function filtered(){
+  const {err,rows}=currentCombos();
+  const q=$("cSearch").value.trim().toLowerCase(),st=$("cStatus").value;
+  let r=rows.filter(x=>(!q||x.c.some(p=>p.name.toLowerCase().includes(q)))&&(st==="all"||(st==="yes")===!!statuses.get(x.key)));
+  if(!sortAsc)r=r.slice().reverse();
+  return {err,total:rows.length,r};
+}
+function renderCombos(){
+  const size=k(),n=players.length,{err,total,r}=filtered();
+  $("notice").innerHTML=err?`<div class="msg">${esc(err)}</div>`:"";
+  const done=r.length?0:0;let doneAll=0;
+  if(!err){currentCombos().rows.forEach(x=>{if(statuses.get(x.key))doneAll++})}
+  $("stats").innerHTML=[["Игроков",n],["Размер команды",size||"—"],["Всего комбинаций",err?0:total],["Выполнено",doneAll],["Осталось",err?0:total-doneAll],["Показано",r.length]].map(([a,b])=>`<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");
+  $("thead").innerHTML=`<tr><th class="sortable" id="thN" title="Сортировать">№ ${sortAsc?"▲":"▼"}</th>${Array.from({length:size},(_,i)=>`<th>Игрок ${i+1}</th>`).join("")}<th>Статус</th><th></th></tr>`;
+  $("thN").onclick=()=>{sortAsc=!sortAsc;renderCombos()};
+  const per=+$("cSize").value,pages=Math.max(1,Math.ceil(r.length/per));
+  if(page>pages)page=pages;
+  const slice=r.slice((page-1)*per,page*per);
+  $("tbody").innerHTML=slice.length?slice.map(x=>{const d=!!statuses.get(x.key);
+    return `<tr><td>${x.n}</td>${x.c.map(p=>`<td>${nameHtml(p)}</td>`).join("")}<td><button class="st ${d?"yes":"no"}" data-k="${x.key}" title="Нажмите, чтобы изменить">${d?"Выполнено":"Не выполнено"}</button></td><td><button data-c="${x.key}">Копировать</button></td></tr>`}).join(""):`<tr><td colspan="${size+3}" class="sub">${err?"":"Нет комбинаций по текущему фильтру."}</td></tr>`;
+  $("info").textContent=r.length?`Строки ${(page-1)*per+1}–${Math.min(page*per,r.length)} из ${r.length}`:"";
+  $("pg").textContent=`${page} / ${pages}`;
+  $("prev").disabled=page<=1;$("next").disabled=page>=pages;
+}
+["kSize","cSearch","cStatus","cSize"].forEach(id=>$(id).addEventListener("input",()=>{page=1;renderCombos()}));
+$("prev").onclick=()=>{page--;renderCombos()};
+$("next").onclick=()=>{page++;renderCombos()};
+$("tbody").addEventListener("click",async e=>{
+  const key=e.target.dataset.k,ck=e.target.dataset.c;
+  if(key){
+    if(!configured)return;
+    const done=!statuses.get(key);statuses.set(key,done);renderCombos();
+    const {error}=await db.from("combo_status").upsert({combo_key:key,done,updated_at:new Date().toISOString()});
+    if(error){toast("Ошибка сохранения статуса");loadStatuses()}
+  }
+  if(ck){const names=ck.split(",").map(id=>players.find(p=>p.id===id)?.name).filter(Boolean);copy(names.join(", "))}
+});
+$("copyAll").onclick=()=>{
+  const {r}=filtered();if(!r.length)return toast("Нечего копировать");
+  copy(r.map(x=>`${x.n}. ${x.c.map(p=>p.name).join(", ")} — ${statuses.get(x.key)?"Выполнено":"Не выполнено"}`).join("\n"),`Скопировано строк: ${r.length}`);
+};
+async function copy(t,msg="Скопировано"){
+  try{await navigator.clipboard.writeText(t)}catch{const a=document.createElement("textarea");a.value=t;document.body.append(a);a.select();document.execCommand("copy");a.remove()}
+  toast(msg);
+}
+
+/* ---------- Контрольные примеры ---------- */
+$("runTests").onclick=()=>{
+  const cases=[[6,3,20],[7,4,35],[8,4,70],[10,4,210],[10,6,210]];
+  $("tests").innerHTML=cases.map(([n,kk,exp])=>{
+    const arr=Array.from({length:n},(_,i)=>({id:"p"+i}));
+    const cs=combinations(arr,kk),uniq=new Set(cs.map(comboKey)).size;
+    const ok=cs.length===exp&&uniq===exp&&binom(n,kk)===BigInt(exp);
+    return `<li class="${ok?"p":"f"}">${ok?"✔":"✘"} ${n} игроков, команда из ${kk}: получено ${cs.length}, уникальных ${uniq}, ожидалось ${exp}</li>`}).join("");
+};
+
+/* ---------- Старт ---------- */
+renderPlayers();renderCombos();
+if(!configured){
+  $("notice").innerHTML='<div class="msg">Сайт не подключён к Supabase. Укажите SUPABASE_URL и SUPABASE_ANON_KEY в начале скрипта в index.html.</div>';
+}else{
+  loadPlayers();loadStatuses();
+  db.channel("team-sync")
+    .on("postgres_changes",{event:"*",schema:"public",table:"players"},loadPlayers)
+    .on("postgres_changes",{event:"*",schema:"public",table:"combo_status"},loadStatuses)
+    .subscribe();
+}
+</script>
+</body>
+</html>
